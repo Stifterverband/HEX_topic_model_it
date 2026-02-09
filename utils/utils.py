@@ -91,8 +91,7 @@ def label_courses_with_gpt(df, topic_list_str, output_path, max_new_topics=20, m
         dynamic_topic_list = "\n".join(current_topics)
         
         prompt = f"""
-        Du bist ein Experte für universitäre Informatik-Lehre. 
-        Deine Aufgabe ist die fachliche Klassifizierung.
+        Du bist ein Experte für universitäre Informatik-Lehre. Deine Aufgabe ist eine SEHR KONSERVATIVE Klassifizierung.
 
         ZUGELASSENE TOPICS:
         {dynamic_topic_list}
@@ -101,15 +100,16 @@ def label_courses_with_gpt(df, topic_list_str, output_path, max_new_topics=20, m
         Titel: {titel}
         Beschreibung: {beschreibung}
 
-        STRENGE ANWEISUNGEN:
-        1. Wähle bis zu 4 passende Topics aus der Liste.
-        2. NEUE TOPICS: Erstelle NUR DANN ein neues Topic (Format: 'NEW_[Themenname]'), wenn es sich zweifelsfrei um ein KERNTHEMA DER INFORMATIK handelt.
-        3. FACHFREMDE THEMEN: Wenn der Kurs aus der BWL, Medizin (ohne Informatik-Bezug), Pädagogik oder anderen Disziplinen stammt, nutze NUR 'Sonstiges / Keine Zuordnung möglich'.
-        4. Wichtigstes zuerst, Trennung durch Komma.
+        STRENGSTE ANWEISUNGEN:
+        1. HAUPTFOKUS: Wähle NUR EIN EINZIGES Topic aus der Liste, das den Kern des Kurses am besten trifft.
+        2. KEINE REDUNDANZ: Wähle NICHT 'Software Engineering', wenn bereits ein spezielleres Thema wie 'Webprogrammierung' oder 'Mobile Entwicklung' passt.
+        3. MULTI-LABEL VERBOT: Nur wenn der Kurs explizit zwei völlig unterschiedliche Fachgebiete gleichwertig behandelt (z.B. KI und Robotik), sind 2 Labels erlaubt. 3 oder 4 Labels sind STRENGSTENS VERBOTEN.
+        4. NEUE TOPICS: Erstelle ein NEW_ Topic nur, wenn es eine fundamentale Informatik-Disziplin ist, die absolut nicht in der Liste steht.
+        5. 'Sonstiges / Keine Zuordnung möglich' ist die Standardwahl für alles, was interdisziplinär oder fachfremd ist (BWL, Soft Skills, reine Management-Themen).
 
         ANTWORTE NUR IM FORMAT:
-        Topics: [Deine Auswahl]
-        Grund: [Kurze Begründung]
+        Topics: [Das eine wichtigste Topic]
+        Grund: [Kurzer Satz zur fachlichen Einordnung]
         """
 
         try:
