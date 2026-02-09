@@ -55,10 +55,13 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 import pandas as pd
 import time
 
+import pandas as pd
+import time
+
 def label_courses_with_gpt(df, topic_list_str, output_path, max_new_topics=20, model_name="gpt-4o-mini"):
     """
     Labels Kurse dynamisch und lernt nur REIN INFORMATISCHE Topics dazu.
-    Gibt den DataFrame, alle Topics und separat die neu gelernten Topics zurück.
+    Trennt mehrere ausgewählte Topics im Output durch " ; ".
     """
     # Basis-Liste erstellen
     current_topics = [t.strip() for t in topic_list_str.strip().split('\n') if t.strip()]
@@ -69,7 +72,7 @@ def label_courses_with_gpt(df, topic_list_str, output_path, max_new_topics=20, m
     RED = "\033[91m"
     RESET = "\033[0m"
     
-    # Spalten initialisieren (Einzahl: Label_ChatGPT)
+    # Spalten initialisieren
     if 'Label_ChatGPT' not in df.columns:
         df['Label_ChatGPT'] = None
     if 'Begründung_KI' not in df.columns:
@@ -102,13 +105,13 @@ def label_courses_with_gpt(df, topic_list_str, output_path, max_new_topics=20, m
 
         STRENGSTE ANWEISUNGEN:
         1. HAUPTFOKUS: Wähle NUR EIN EINZIGES Topic aus der Liste, das den Kern des Kurses am besten trifft.
-        2. KEINE REDUNDANZ: Wähle NICHT 'Software Engineering', wenn bereits ein spezielleres Thema wie 'Webprogrammierung' oder 'Mobile Entwicklung' passt.
-        3. MULTI-LABEL VERBOT: Nur wenn der Kurs explizit zwei völlig unterschiedliche Fachgebiete gleichwertig behandelt (z.B. KI und Robotik), sind 2 Labels erlaubt. 3 oder 4 Labels sind STRENGSTENS VERBOTEN.
+        2. KEINE REDUNDANZ: Wähle NICHT 'Software Engineering', wenn bereits ein spezielleres Thema wie 'Webprogrammierung' passt.
+        3. MULTI-LABEL: Nur wenn der Kurs explizit zwei völlig unterschiedliche Fachgebiete gleichwertig behandelt, sind 2 Labels erlaubt. 3 oder 4 Labels sind STRENGSTENS VERBOTEN.
         4. NEUE TOPICS: Erstelle ein NEW_ Topic nur, wenn es eine fundamentale Informatik-Disziplin ist, die absolut nicht in der Liste steht.
-        5. 'Sonstiges / Keine Zuordnung möglich' ist die Standardwahl für alles, was interdisziplinär oder fachfremd ist (BWL, Soft Skills, reine Management-Themen).
+        5. 'Sonstiges / Keine Zuordnung möglich' ist die Standardwahl für alles, was interdisziplinär oder fachfremd ist.
 
         ANTWORTE NUR IM FORMAT:
-        Topics: [Das eine wichtigste Topic]
+        Topics: [Topic A, Topic B]
         Grund: [Kurzer Satz zur fachlichen Einordnung]
         """
 
@@ -116,7 +119,7 @@ def label_courses_with_gpt(df, topic_list_str, output_path, max_new_topics=20, m
             response = client.chat.completions.create(
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": "Du bist ein strenger Informatik-Professor. Du akzeptierst nur informatische Fachgebiete."},
+                    {"role": "system", "content": "Du bist ein strenger Informatik-Professor. Falls du mehrere Topics wählst, trenne sie innerhalb der Klammern mit Kommata."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0,
@@ -124,22 +127,25 @@ def label_courses_with_gpt(df, topic_list_str, output_path, max_new_topics=20, m
             )
             
             answer = response.choices[0].message.content
-            topics_part = answer.split("Topics:")[1].split("Grund:")[0].strip().replace("[", "").replace("]", "")
+            
+            # Parsing: Inhalt zwischen "Topics:" und "Grund:" extrahieren
+            topics_part_raw = answer.split("Topics:")[1].split("Grund:")[0].strip().replace("[", "").replace("]", "")
             reason_part = answer.split("Grund:")[1].strip()
 
-            found_topics = [t.strip() for t in topics_part.split(",")]
+            # In Liste umwandeln, trimmen und leere Einträge entfernen
+            found_topics = [t.strip() for t in topics_part_raw.split(",") if t.strip()]
+            
+            # Neue Topics verarbeiten
             for ft in found_topics:
-                # Prüfen auf "NEW_" und ob es wirklich neu ist
                 if ft.startswith("NEW_") and ft not in current_topics:
                     if new_topics_count < max_new_topics:
                         current_topics.append(ft)
-                        newly_learned.append(ft) # In die separate Liste
+                        newly_learned.append(ft)
                         new_topics_count += 1
-                        # Ausgabe in ROT
                         print(f"{RED}(!) Neues Informatik-Topic gelernt: {ft} ({new_topics_count}/{max_new_topics}){RESET}")
 
-            # Speichern im DF
-            df.at[df.index[i], 'Label_ChatGPT'] = topics_part
+            # --- Speichern im DF mit Semikolon-Trennung ---
+            df.at[df.index[i], 'Label_ChatGPT'] = " ; ".join(found_topics)
             df.at[df.index[i], 'Begründung_KI'] = reason_part
             
         except Exception as e:
