@@ -1,0 +1,1 @@
+{"embedding_model": "paraphrase-multilingual-mpnet-base-v2", "n_neighbors": 10, "n_components": 11, "min_cluster_size": 10, "min_samples": 2, "nr_topics": 45, "diversity": 0.30000000000000004, "min_topic_size": 20}

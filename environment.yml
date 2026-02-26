@@ -1,4 +1,4 @@
-name: torch5080
+name: hex_topic_model_it
 channels:
   - conda-forge
   - defaults
@@ -122,8 +122,8 @@ dependencies:
       - thinc==8.3.7
       - threadpoolctl==3.6.0
       - tokenizers==0.22.1
-      - torch==2.10.0.dev20251106+cu128
-      - torchvision==0.25.0.dev20251106+cu128
+      - torch==2.2.1 --index-url https://download.pytorch.org/whl/cu121
+      - torchvision==0.17.1 --index-url https://download.pytorch.org/whl/cu121
       - tqdm==4.67.1
       - transformers==4.57.1
       - typer==0.20.0
